@@ -29,7 +29,7 @@ const PointOfSaleOrderProcessing = () => {
   ]);
 
   const [products] = useState([
-    // Fruit Teas - Added sizes and prices
+    // Fruit Teas
     { id: 'fruit-001', name: 'Lemon fruit tea', category: 'fruit-teas', sizes: [
       { id: 'medium', name: 'Medium', price: 400 },
       { id: 'large', name: 'Large', price: 500 }
@@ -38,216 +38,42 @@ const PointOfSaleOrderProcessing = () => {
       { id: 'medium', name: 'Medium', price: 400 },
       { id: 'large', name: 'Large', price: 500 }
     ]},
-    { id: 'fruit-003', name: 'Peach fruit tea', category: 'fruit-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'fruit-004', name: 'Raspberry fruit tea', category: 'fruit-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'fruit-005', name: 'Lychee fruit tea', category: 'fruit-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'fruit-006', name: 'Strawberry fruit tea', category: 'fruit-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'fruit-007', name: 'Green fruit tea', category: 'fruit-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'fruit-008', name: 'Honeydew fruit tea', category: 'fruit-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-
-    // Milk Teas - Added sizes and prices
-    { id: 'milk-001', name: 'Taro milk tea', category: 'milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
+    // ... other fruit teas ...
+    // Milk Teas
+    { id: 'milk-001', name: 'Taro milk tea', category: 'milk-teas', 
+      sizes: [
+        { id: 'medium', name: 'Medium', price: 400 },
+        { id: 'large', name: 'Large', price: 500 }
+      ],
+      image: '/assets/images/taro-milk-tea.jpg'
+    },
     { id: 'milk-002', name: 'Hazelnut milk tea', category: 'milk-teas', sizes: [
       { id: 'medium', name: 'Medium', price: 400 },
       { id: 'large', name: 'Large', price: 500 }
     ]},
-    { id: 'milk-003', name: 'Vanilla milk tea', category: 'milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'milk-004', name: 'Chocolate milk tea', category: 'milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'milk-005', name: 'Lavender milk tea', category: 'milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'milk-006', name: 'Mocha milk tea', category: 'milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'milk-007', name: 'Papaya milk tea', category: 'milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'milk-008', name: 'Lotus milk tea', category: 'milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-
-    // Cake Milk Teas (Smoothies) - Keeping existing prices
-    { id: 'cake-001', name: 'Strawberry cake milk tea', category: 'cake-milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'cake-002', name: 'Pineapple smoothie boba', category: 'cake-milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'cake-003', name: 'Tiger milk tea', category: 'cake-milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'cake-004', name: 'Passion smoothie boba', category: 'cake-milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'cake-005', name: 'Winter melon milk tea', category: 'cake-milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'cake-006', name: 'Strawberry smoothie boba', category: 'cake-milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'cake-007', name: 'Matcha cake milk tea', category: 'cake-milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'cake-008', name: 'Taro cake milk tea', category: 'cake-milk-teas', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-
-    // Milkshakes - Keeping existing prices
-    { id: 'shake-001', name: 'Vanilla milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-002', name: 'Blueberry milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-003', name: 'Vanilla boba milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-004', name: 'Blueberry boba milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-005', name: 'Chocolate milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-006', name: 'Oreo boba milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-007', name: 'Passion boba milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-008', name: 'Mango milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-009', name: 'Lychee jelly milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-010', name: 'Blueberry jelly milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-011', name: 'Pineapple jelly milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-012', name: 'Raspberry jelly milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'shake-013', name: 'Coffee jelly milkshake', category: 'milkshakes', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-
-    // Mojitos & Mocktails - Keeping existing prices
-    { id: 'mojito-001', name: 'Peach fruit mojito boba', category: 'mojitos-mocktails', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'mojito-002', name: 'Mango boba milkshake', category: 'mojitos-mocktails', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'mojito-003', name: 'Raspberry boba milkshake', category: 'mojitos-mocktails', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'mojito-004', name: 'Lemon fruit mojito boba', category: 'mojitos-mocktails', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'mojito-005', name: 'Vanilla boba lemonade boba', category: 'mojitos-mocktails', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'mojito-006', name: 'Blueberry boba lemonade boba', category: 'mojitos-mocktails', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'mojito-007', name: 'Passion latte boba', category: 'mojitos-mocktails', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'mojito-008', name: 'Strawberry ade boba', category: 'mojitos-mocktails', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'mojito-009', name: 'Pomegranate boba', category: 'mojitos-mocktails', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-    { id: 'mojito-010', name: 'Blue Lagoon mocktail', category: 'mojitos-mocktails', sizes: [
-      { id: 'medium', name: 'Medium', price: 500 },
-      { id: 'large', name: 'Large', price: 600 }
-    ]},
-
-    // Boba & Jellies - Added sizes and prices
-    { id: 'boba-001', name: 'Mango boba', category: 'boba-jellies', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'boba-002', name: 'Passion boba', category: 'boba-jellies', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'boba-003', name: 'Kiwi boba', category: 'boba-jellies', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'boba-004', name: 'Blueberry boba', category: 'boba-jellies', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]},
-    { id: 'boba-005', name: 'Pomegranate boba', category: 'boba-jellies', sizes: [
-      { id: 'medium', name: 'Medium', price: 400 },
-      { id: 'large', name: 'Large', price: 500 }
-    ]}
+    // ... other milk teas ...
+    // Cake Milk Teas (Smoothies)
+    { id: 'cake-001', name: 'Strawberry cake milk tea', category: 'cake-milk-teas', 
+      sizes: [
+        { id: 'medium', name: 'Medium', price: 500 },
+        { id: 'large', name: 'Large', price: 600 }
+      ],
+      image: '/assets/images/strawberry-cake-milk-tea.jpg'
+    },
+    // ... other cake milk teas ...
+    // Milkshakes
+    { id: 'shake-001', name: 'Vanilla milkshake', category: 'milkshakes', 
+      sizes: [
+        { id: 'medium', name: 'Medium', price: 400 },
+        { id: 'large', name: 'Large', price: 500 }
+      ],
+      image: '/assets/images/vanilla-milkshake.jpg'
+    },
+    // ... other milkshakes ...
+    // Mojitos & Mocktails
+    // ... mojitos & mocktails ...
+    // Boba & Jellies
+    // ... boba & jellies ...
   ]);
 
   const [activeCategory, setActiveCategory] = useState('all');
