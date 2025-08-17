@@ -29,27 +29,75 @@ const PointOfSaleOrderProcessing = () => {
   ]);
 
   const [products] = useState([
-    // Fruit Teas
-    { id: 'fruit-001', name: 'Lemon fruit tea', category: 'fruit-teas' },
-    { id: 'fruit-002', name: 'Blueberry fruit tea', category: 'fruit-teas' },
-    { id: 'fruit-003', name: 'Peach fruit tea', category: 'fruit-teas' },
-    { id: 'fruit-004', name: 'Raspberry fruit tea', category: 'fruit-teas' },
-    { id: 'fruit-005', name: 'Lychee fruit tea', category: 'fruit-teas' },
-    { id: 'fruit-006', name: 'Strawberry fruit tea', category: 'fruit-teas' },
-    { id: 'fruit-007', name: 'Green fruit tea', category: 'fruit-teas' },
-    { id: 'fruit-008', name: 'Honeydew fruit tea', category: 'fruit-teas' },
+    // Fruit Teas - Added pricing
+    { id: 'fruit-001', name: 'Lemon fruit tea', category: 'fruit-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'fruit-002', name: 'Blueberry fruit tea', category: 'fruit-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'fruit-003', name: 'Peach fruit tea', category: 'fruit-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'fruit-004', name: 'Raspberry fruit tea', category: 'fruit-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'fruit-005', name: 'Lychee fruit tea', category: 'fruit-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'fruit-006', name: 'Strawberry fruit tea', category: 'fruit-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'fruit-007', name: 'Green fruit tea', category: 'fruit-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'fruit-008', name: 'Honeydew fruit tea', category: 'fruit-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
 
-    // Milk Teas
-    { id: 'milk-001', name: 'Taro milk tea', category: 'milk-teas' },
-    { id: 'milk-002', name: 'Hazelnut milk tea', category: 'milk-teas' },
-    { id: 'milk-003', name: 'Vanilla milk tea', category: 'milk-teas' },
-    { id: 'milk-004', name: 'Chocolate milk tea', category: 'milk-teas' },
-    { id: 'milk-005', name: 'Lavender milk tea', category: 'milk-teas' },
-    { id: 'milk-006', name: 'Mocha milk tea', category: 'milk-teas' },
-    { id: 'milk-007', name: 'Papaya milk tea', category: 'milk-teas' },
-    { id: 'milk-008', name: 'Lotus milk tea', category: 'milk-teas' },
+    // Milk Teas - Added pricing
+    { id: 'milk-001', name: 'Taro milk tea', category: 'milk-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'milk-002', name: 'Hazelnut milk tea', category: 'milk-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'milk-003', name: 'Vanilla milk tea', category: 'milk-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'milk-004', name: 'Chocolate milk tea', category: 'milk-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'milk-005', name: 'Lavender milk tea', category: 'milk-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'milk-006', name: 'Mocha milk tea', category: 'milk-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'milk-007', name: 'Papaya milk tea', category: 'milk-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'milk-008', name: 'Lotus milk tea', category: 'milk-teas', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
 
-    // Cake Milk Teas (Smoothies)
+    // Cake Milk Teas (Smoothies) - Prices unchanged
     { id: 'cake-001', name: 'Strawberry cake milk tea', category: 'cake-milk-teas', sizes: [
       { id: 'medium', name: 'Medium', price: 500 },
       { id: 'large', name: 'Large', price: 600 }
@@ -83,7 +131,7 @@ const PointOfSaleOrderProcessing = () => {
       { id: 'large', name: 'Large', price: 600 }
     ]},
 
-    // Milkshakes
+    // Milkshakes - Prices unchanged
     { id: 'shake-001', name: 'Vanilla milkshake', category: 'milkshakes', sizes: [
       { id: 'medium', name: 'Medium', price: 400 },
       { id: 'large', name: 'Large', price: 500 }
@@ -137,7 +185,7 @@ const PointOfSaleOrderProcessing = () => {
       { id: 'large', name: 'Large', price: 500 }
     ]},
 
-    // Mojitos & Mocktails
+    // Mojitos & Mocktails - Prices unchanged
     { id: 'mojito-001', name: 'Peach fruit mojito boba', category: 'mojitos-mocktails', sizes: [
       { id: 'medium', name: 'Medium', price: 500 },
       { id: 'large', name: 'Large', price: 600 }
@@ -179,12 +227,27 @@ const PointOfSaleOrderProcessing = () => {
       { id: 'large', name: 'Large', price: 600 }
     ]},
 
-    // Boba & Jellies
-    { id: 'boba-001', name: 'Mango boba', category: 'boba-jellies' },
-    { id: 'boba-002', name: 'Passion boba', category: 'boba-jellies' },
-    { id: 'boba-003', name: 'Kiwi boba', category: 'boba-jellies' },
-    { id: 'boba-004', name: 'Blueberry boba', category: 'boba-jellies' },
-    { id: 'boba-005', name: 'Pomegranate boba', category: 'boba-jellies' }
+    // Boba & Jellies - Added pricing
+    { id: 'boba-001', name: 'Mango boba', category: 'boba-jellies', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'boba-002', name: 'Passion boba', category: 'boba-jellies', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'boba-003', name: 'Kiwi boba', category: 'boba-jellies', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'boba-004', name: 'Blueberry boba', category: 'boba-jellies', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]},
+    { id: 'boba-005', name: 'Pomegranate boba', category: 'boba-jellies', sizes: [
+      { id: 'medium', name: 'Medium', price: 400 },
+      { id: 'large', name: 'Large', price: 500 }
+    ]}
   ]);
 
   const [activeCategory, setActiveCategory] = useState('all');
