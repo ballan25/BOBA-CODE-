@@ -11,14 +11,15 @@ const ProductGrid = ({ products, onAddToCart, onProductSelect }) => {
     const productName = product?.name?.toLowerCase() || '';
     
     // Map specific products to their images using correct public folder path
+    // Updated to use hyphens instead of spaces in filenames
     if (productName.includes('blueberry milkshake')) {
-      return '/assets/images/blueberry milkshake.jpg';
+      return '/assets/images/blueberry-milkshake.jpg';
     }
     if (productName.includes('strawberry') && productName.includes('milk tea')) {
-      return '/assets/images/strawberry milk tea.jpg';
+      return '/assets/images/strawberry-milk-tea.jpg';
     }
     if (productName.includes('taro milk tea')) {
-      return '/assets/images/taro milk tea.jpg';
+      return '/assets/images/taro-milk-tea.jpg';
     }
     
     // Return null for no image
