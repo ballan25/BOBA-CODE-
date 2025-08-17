@@ -38,7 +38,7 @@ const PaymentProcessingAndCheckout = () => {
       try {
         const parsedOrderData = JSON.parse(savedOrderData);
         
-        // Transform the cart items to match the expected format
+        // Transform the cart items to match the expected format - NO TAX CALCULATION
         const transformedOrderData = {
           orderId: 'ORD' + Date.now().toString().slice(-6),
           items: parsedOrderData.items.map(item => ({
@@ -50,8 +50,8 @@ const PaymentProcessingAndCheckout = () => {
             toppings: item.toppings || [] // Add toppings if they exist
           })),
           subtotal: parsedOrderData.total,
-          tax: parsedOrderData.tax || (parsedOrderData.total * 0.16),
-          total: parsedOrderData.grandTotal || (parsedOrderData.total * 1.16),
+          tax: 0, // NO TAX
+          total: parsedOrderData.total, // Total equals subtotal (no tax added)
           timestamp: parsedOrderData.timestamp || new Date().toISOString(),
           cashier: parsedOrderData.cashier
         };
@@ -106,7 +106,7 @@ const PaymentProcessingAndCheckout = () => {
   };
 
   const handlePrintReceipt = () => {
-    // Mock receipt printing
+    // Mock receipt printing - Updated to remove tax line
     const receiptWindow = window.open('', '_blank');
     receiptWindow?.document?.write(`
       <html>
@@ -139,14 +139,6 @@ const PaymentProcessingAndCheckout = () => {
             </div>
           ` : ''}
           <div class="total">
-            <div class="item">
-              <span>Subtotal:</span>
-              <span>KES ${orderData?.subtotal?.toFixed(2)}</span>
-            </div>
-            <div class="item">
-              <span>Tax (16%):</span>
-              <span>KES ${orderData?.tax?.toFixed(2)}</span>
-            </div>
             <div class="item">
               <span>Total:</span>
               <span>KES ${(orderData?.total + tipAmount)?.toFixed(2)}</span>
@@ -295,7 +287,7 @@ const PaymentProcessingAndCheckout = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Order Summary Sidebar */}
+              {/* Order Summary Sidebar - Updated to remove tax display */}
               <div className="lg:col-span-1">
                 <div className="bg-card border border-border rounded-lg p-6 sticky top-24">
                   <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
@@ -332,10 +324,7 @@ const PaymentProcessingAndCheckout = () => {
                       <span>Subtotal:</span>
                       <span>KES {orderData?.subtotal?.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</span>
                     </div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Tax (16%):</span>
-                      <span>KES {orderData?.tax?.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</span>
-                    </div>
+                    {/* Tax line removed */}
                     {tipAmount > 0 && (
                       <div className="flex justify-between text-sm mb-2">
                         <span>Tip:</span>
