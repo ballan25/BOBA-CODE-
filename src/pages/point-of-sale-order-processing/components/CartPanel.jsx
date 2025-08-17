@@ -20,16 +20,14 @@ const CartPanel = ({
   };
 
   return (
-    <div className="w-full lg:w-2/5 bg-card border-l border-border flex flex-col">
-      {/* Cart Header */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-semibold text-foreground">
-            Current Order
-          </h2>
-          <div className="flex items-center space-x-2">
-            <div className="bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-medium">
-              {getTotalItems()} items
+    <div className="w-full bg-card border border-border rounded-lg flex flex-col max-h-80">
+      {/* Ultra Compact Cart Header */}
+      <div className="p-2 border-b border-border">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Current Order</h2>
+          <div className="flex items-center space-x-1">
+            <div className="bg-primary text-primary-foreground px-1.5 py-1.0 rounded-full text-xs font-medium">
+              {getTotalItems()}
             </div>
             {cartItems?.length > 0 && (
               <Button
@@ -37,8 +35,8 @@ const CartPanel = ({
                 size="icon"
                 onClick={onClearCart}
                 iconName="Trash2"
-                iconSize={16}
-                className="text-error hover:text-error hover:bg-error/10 touch-feedback"
+                iconSize={12}
+                className="text-error hover:text-error hover:bg-error/10 touch-feedback w-6 h-6"
                 title="Clear cart"
               />
             )}
@@ -46,65 +44,56 @@ const CartPanel = ({
         </div>
         
         {currentUser && (
-          <div className="text-xs text-muted-foreground">
-            Cashier: {currentUser?.name} | ID: {currentUser?.id}
+          <div className="text-xs text-muted-foreground truncate mt-0.5">
+            {currentUser?.name} | {currentUser?.id}
           </div>
         )}
       </div>
-      {/* Cart Items */}
-      <div className="flex-1 overflow-y-auto">
+
+      {/* Cart Items - Ultra Compact */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         {cartItems?.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <Icon name="ShoppingCart" size={48} className="text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              Cart is Empty
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Add items from the menu to start an order
-            </p>
+          <div className="flex flex-col items-center justify-center p-6 text-center">
+            <Icon name="ShoppingCart" size={24} className="text-muted-foreground mb-2" />
+            <h3 className="text-xs font-medium text-foreground mb-1">Cart is Empty</h3>
+            <p className="text-xs text-muted-foreground">Add items to start</p>
           </div>
         ) : (
-          <div className="p-4 space-y-3">
+          <div className="p-2 space-y-1">
             {cartItems?.map((item) => (
-              <div key={item?.cartId} className="bg-muted/50 rounded-lg p-3 border border-border">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm text-foreground truncate">
+              <div key={item?.cartId} className="bg-muted/20 rounded p-1.5 border border-border/30">
+                {/* Single Row Layout */}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0 pr-2">
+                    <h4 className="font-medium text-xs text-foreground truncate leading-tight">
                       {item?.name}
                     </h4>
-                    {item?.size && (
-                      <p className="text-xs text-muted-foreground">
-                        Size: {item?.size}
-                      </p>
-                    )}
-                    {item?.toppings && item?.toppings?.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Toppings: {item?.toppings?.join(', ')}
-                      </p>
-                    )}
+                    <div className="flex items-center space-x-1 mt-0.5">
+                      {item?.size && (
+                        <span className="text-xs text-muted-foreground">
+                          {item?.size}
+                        </span>
+                      )}
+                      {item?.toppings && item?.toppings?.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          | +{item?.toppings?.length}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onRemoveItem(item?.cartId)}
-                    iconName="X"
-                    iconSize={14}
-                    className="text-error hover:text-error hover:bg-error/10 touch-feedback flex-shrink-0"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+                  
+                  {/* Quantity Controls - Inline */}
+                  <div className="flex items-center space-x-1">
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => onUpdateQuantity(item?.cartId, item?.quantity - 1)}
                       disabled={item?.quantity <= 1}
                       iconName="Minus"
-                      iconSize={14}
-                      className="w-8 h-8 touch-feedback"
+                      iconSize={8}
+                      className="w-5 h-5 touch-feedback"
                     />
-                    <span className="w-8 text-center text-sm font-medium text-foreground">
+                    <span className="w-4 text-center text-xs font-medium text-foreground">
                       {item?.quantity}
                     </span>
                     <Button
@@ -112,12 +101,24 @@ const CartPanel = ({
                       size="icon"
                       onClick={() => onUpdateQuantity(item?.cartId, item?.quantity + 1)}
                       iconName="Plus"
-                      iconSize={14}
-                      className="w-8 h-8 touch-feedback"
+                      iconSize={8}
+                      className="w-5 h-5 touch-feedback"
                     />
                   </div>
-                  <div className="text-sm font-semibold text-foreground">
-                    {formatPrice(item?.price * item?.quantity)}
+                  
+                  {/* Price and Remove */}
+                  <div className="flex items-center space-x-1 ml-2">
+                    <span className="text-xs font-semibold text-foreground">
+                      {formatPrice(item?.price * item?.quantity)}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onRemoveItem(item?.cartId)}
+                      iconName="X"
+                      iconSize={10}
+                      className="text-error hover:text-error hover:bg-error/10 touch-feedback w-5 h-5"
+                    />
                   </div>
                 </div>
               </div>
@@ -125,34 +126,33 @@ const CartPanel = ({
           </div>
         )}
       </div>
-      {/* Cart Footer */}
+
+      {/* Ultra Compact Footer */}
       {cartItems?.length > 0 && (
-        <div className="border-t border-border p-4 space-y-4">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal:</span>
-              <span className="text-foreground">{formatPrice(cartTotal)}</span>
+        <div className="border-t border-border p-2">
+          {/* Summary in single row */}
+          <div className="flex justify-between items-center text-xs mb-2">
+            <div className="flex space-x-4">
+              <span className="text-muted-foreground">
+                Sub: {formatPrice(cartTotal)}
+              </span>
+              <span className="text-muted-foreground">
+                Tax: {formatPrice(cartTotal * 0.16)}
+              </span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tax (16%):</span>
-              <span className="text-foreground">{formatPrice(cartTotal * 0.16)}</span>
-            </div>
-            <div className="border-t border-border pt-2">
-              <div className="flex justify-between text-lg font-semibold">
-                <span className="text-foreground">Total:</span>
-                <span className="text-primary">{formatPrice(cartTotal * 1.16)}</span>
-              </div>
-            </div>
+            <span className="text-sm font-bold text-primary">
+              {formatPrice(cartTotal * 1.16)}
+            </span>
           </div>
 
           <Button
             variant="default"
-            size="lg"
+            size="default"
             onClick={onProceedToPayment}
             iconName="CreditCard"
             iconPosition="left"
-            iconSize={18}
-            className="w-full touch-feedback"
+            iconSize={14}
+            className="w-full touch-feedback text-xs py-1.5"
           >
             Proceed to Payment
           </Button>

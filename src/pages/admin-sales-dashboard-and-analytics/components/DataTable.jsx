@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
@@ -6,7 +6,22 @@ import { Checkbox } from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
 
-const DataTable = ({ data = [], onEdit, onBulkOperation, user }) => {
+const DataTable = ({ 
+  onEdit, 
+  onBulkOperation, 
+  user,
+  apiEndpoint = '/api/transactions',
+  refreshInterval = 30000, // 30 seconds default
+  onError,
+  filters = {} // External filters (e.g., from cashier filter, date range)
+}) => {
+  // Data fetching states
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  // UI states
   const [selectedRows, setSelectedRows] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,7 +31,233 @@ const DataTable = ({ data = [], onEdit, onBulkOperation, user }) => {
   const [pageSize, setPageSize] = useState(20);
   const [editingRow, setEditingRow] = useState(null);
 
-  // Filtering and searching
+  // Fetch transactions data
+  const fetchTransactions = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      
+      // Add external filters
+      if (filters.cashiers && filters.cashiers.length > 0) {
+        queryParams.append('cashiers', filters.cashiers.join(','));
+      }
+      if (filters.dateRange) {
+        if (filters.dateRange.start) queryParams.append('start_date', filters.dateRange.start);
+        if (filters.dateRange.end) queryParams.append('end_date', filters.dateRange.end);
+      }
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.method) queryParams.append('method', filters.method);
+
+      // Add sorting parameters
+      queryParams.append('sort', sortConfig.key);
+      queryParams.append('order', sortConfig.direction);
+      
+      const url = `${apiEndpoint}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add authentication headers if needed
+          // 'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      
+      // Assuming the API returns an array of transactions or { transactions: [...], total: number }
+      const transactionsList = Array.isArray(responseData) ? responseData : responseData.transactions || [];
+      
+      setData(transactionsList);
+      setLastUpdated(new Date());
+      
+    } catch (err) {
+      console.error('Error fetching transactions:', err);
+      setError(err.message);
+      onError?.(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiEndpoint, filters, sortConfig, onError]);
+
+  // Initial fetch and setup interval for real-time updates
+  useEffect(() => {
+    fetchTransactions();
+
+    // Set up interval for real-time updates
+    const interval = setInterval(() => {
+      fetchTransactions();
+    }, refreshInterval);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
+  }, [fetchTransactions, refreshInterval]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, searchTerm, statusFilter, methodFilter]);
+
+  // Manual refresh handler
+  const handleRefresh = () => {
+    fetchTransactions();
+  };
+
+  // Edit transaction via API
+  const handleEdit = async (transaction) => {
+    if (user?.role !== 'manager') {
+      alert('Only managers can edit transactions');
+      return;
+    }
+    setEditingRow(transaction?.id);
+  };
+
+  const handleSaveEdit = async (transactionId, newData) => {
+    try {
+      const response = await fetch(`${apiEndpoint}/${transactionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add authentication headers if needed
+        },
+        body: JSON.stringify(newData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update transaction: ${response.status}`);
+      }
+
+      const updatedTransaction = await response.json();
+      
+      // Update local data
+      setData(currentData => 
+        currentData.map(transaction => 
+          transaction.id === transactionId ? updatedTransaction : transaction
+        )
+      );
+      
+      setEditingRow(null);
+      onEdit?.(transactionId, updatedTransaction);
+      
+    } catch (err) {
+      console.error('Error updating transaction:', err);
+      alert(`Failed to update transaction: ${err.message}`);
+    }
+  };
+
+  // Bulk operations via API
+  const handleBulkAction = async (action) => {
+    if (selectedRows?.length === 0) {
+      alert('Please select transactions first');
+      return;
+    }
+
+    try {
+      let response;
+      
+      switch (action) {
+        case 'export':
+          // Handle export - could be a different endpoint or client-side processing
+          response = await fetch(`${apiEndpoint}/export`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transaction_ids: selectedRows }),
+          });
+          
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `transactions_export_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+          }
+          break;
+          
+        case 'delete':
+          if (!window.confirm(`Are you sure you want to delete ${selectedRows.length} transactions?`)) {
+            return;
+          }
+          
+          response = await fetch(`${apiEndpoint}/bulk-delete`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transaction_ids: selectedRows }),
+          });
+          
+          if (response.ok) {
+            // Remove deleted transactions from local data
+            setData(currentData => 
+              currentData.filter(transaction => !selectedRows.includes(transaction.id))
+            );
+            alert(`${selectedRows.length} transactions deleted successfully`);
+          }
+          break;
+          
+        default:
+          throw new Error(`Unknown bulk action: ${action}`);
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Bulk operation failed: ${response.status}`);
+      }
+      
+    } catch (err) {
+      console.error('Bulk operation error:', err);
+      alert(`Bulk operation failed: ${err.message}`);
+    } finally {
+      onBulkOperation?.(action, selectedRows);
+      setSelectedRows([]);
+    }
+  };
+
+  // View transaction details via API
+  const handleViewTransaction = async (transactionId) => {
+    try {
+      const response = await fetch(`${apiEndpoint}/${transactionId}`, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const transactionDetails = await response.json();
+        // You could open a modal here or navigate to a detail page
+        console.log('Transaction details:', transactionDetails);
+        alert(`Viewing transaction ${transactionId}`);
+      }
+    } catch (err) {
+      console.error('Error fetching transaction details:', err);
+      alert('Failed to load transaction details');
+    }
+  };
+
+  // Get receipt via API
+  const handleViewReceipt = async (transactionId) => {
+    try {
+      const response = await fetch(`${apiEndpoint}/${transactionId}/receipt`, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const receiptData = await response.json();
+        // Handle receipt display - could open in new window, modal, etc.
+        console.log('Receipt data:', receiptData);
+        alert(`Opening receipt for ${transactionId}`);
+      }
+    } catch (err) {
+      console.error('Error fetching receipt:', err);
+      alert('Failed to load receipt');
+    }
+  };
+
+  // Filtering and searching (client-side for better UX)
   const filteredData = useMemo(() => {
     return data?.filter(transaction => {
       const matchesSearch = !searchTerm || 
@@ -36,7 +277,7 @@ const DataTable = ({ data = [], onEdit, onBulkOperation, user }) => {
     });
   }, [data, searchTerm, statusFilter, methodFilter]);
 
-  // Sorting
+  // Client-side sorting (server-side sorting already applied, this is for additional sorting)
   const sortedData = useMemo(() => {
     if (!sortConfig?.key) return filteredData;
     
@@ -96,29 +337,6 @@ const DataTable = ({ data = [], onEdit, onBulkOperation, user }) => {
     }
   };
 
-  const handleBulkAction = (action) => {
-    if (selectedRows?.length === 0) {
-      alert('Please select transactions first');
-      return;
-    }
-    
-    onBulkOperation?.(action, selectedRows);
-    setSelectedRows([]);
-  };
-
-  const handleEdit = (transaction) => {
-    if (user?.role !== 'manager') {
-      alert('Only managers can edit transactions');
-      return;
-    }
-    setEditingRow(transaction?.id);
-  };
-
-  const handleSaveEdit = (transactionId, newData) => {
-    onEdit?.(transactionId, newData);
-    setEditingRow(null);
-  };
-
   const getStatusBadge = (status) => {
     const colors = {
       completed: 'bg-success/10 text-success border-success/20',
@@ -155,12 +373,53 @@ const DataTable = ({ data = [], onEdit, onBulkOperation, user }) => {
       <Icon
         name={
           sortConfig?.key === column
-            ? sortConfig?.direction === 'asc' ?'ChevronUp' :'ChevronDown' :'ChevronsUpDown'
+            ? sortConfig?.direction === 'asc' ? 'ChevronUp' : 'ChevronDown' : 'ChevronsUpDown'
         }
         size={14}
       />
     </button>
   );
+
+  // Loading state
+  if (loading && data.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <span className="text-muted-foreground">Loading transactions...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && data.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-foreground flex items-center">
+            <Icon name="Table" size={20} className="mr-2" />
+            Transaction Details
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            className="text-xs touch-feedback"
+          >
+            <Icon name="RefreshCw" size={14} className="mr-1" />
+            Retry
+          </Button>
+        </div>
+        <div className="text-center text-error">
+          <Icon name="AlertCircle" size={48} className="mx-auto mb-4" />
+          <p>Failed to load transactions: {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
@@ -168,9 +427,23 @@ const DataTable = ({ data = [], onEdit, onBulkOperation, user }) => {
         <h3 className="text-lg font-semibold text-foreground flex items-center">
           <Icon name="Table" size={20} className="mr-2" />
           Transaction Details
+          {loading && (
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary ml-2"></div>
+          )}
         </h3>
         
         <div className="flex items-center space-x-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            className="text-xs touch-feedback"
+            disabled={loading}
+          >
+            <Icon name="RefreshCw" size={14} className="mr-1" />
+            Refresh
+          </Button>
+          
           <div className="text-sm text-muted-foreground">
             {filteredData?.length} transactions
           </div>
@@ -205,6 +478,15 @@ const DataTable = ({ data = [], onEdit, onBulkOperation, user }) => {
           )}
         </div>
       </div>
+
+      {error && data.length > 0 && (
+        <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-md">
+          <div className="flex items-center text-error text-sm">
+            <Icon name="AlertCircle" size={14} className="mr-2" />
+            Update failed: {error}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -341,7 +623,7 @@ const DataTable = ({ data = [], onEdit, onBulkOperation, user }) => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => alert(`Viewing transaction ${transaction?.id}`)}
+                        onClick={() => handleViewTransaction(transaction?.id)}
                         iconName="Eye"
                         iconSize={14}
                         className="touch-feedback"
@@ -361,7 +643,7 @@ const DataTable = ({ data = [], onEdit, onBulkOperation, user }) => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => alert(`Opening receipt for ${transaction?.id}`)}
+                        onClick={() => handleViewReceipt(transaction?.id)}
                         iconName="Receipt"
                         iconSize={14}
                         className="touch-feedback"
@@ -429,8 +711,16 @@ const DataTable = ({ data = [], onEdit, onBulkOperation, user }) => {
           </div>
         </div>
       )}
+
+      {/* Last updated timestamp */}
+      {lastUpdated && (
+        <div className="mt-4 text-xs text-muted-foreground text-center">
+          <Icon name="Clock" size={12} className="inline mr-1" />
+          Last updated: {lastUpdated.toLocaleTimeString()}
+        </div>
+      )}
       
-      {paginatedData?.length === 0 && (
+      {paginatedData?.length === 0 && !loading && (
         <div className="text-center py-12">
           <Icon name="Table" size={48} className="mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">

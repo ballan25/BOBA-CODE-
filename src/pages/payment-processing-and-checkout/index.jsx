@@ -21,54 +21,58 @@ const PaymentProcessingAndCheckout = () => {
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [tipAmount, setTipAmount] = useState(0);
 
-  // Mock user data - in real app, this would come from authentication context
   useEffect(() => {
+    // Get user data (you might want to get this from your auth context instead)
     const mockUser = {
-      id: 'user_001',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@bobacafe.com',
-      role: 'cashier' // or 'manager'
+      id: 'CSH001',
+      name: 'Sarah Wanjiku',
+      email: 'sarah.wanjiku@bobacafe.co.ke',
+      role: 'cashier'
     };
     setUser(mockUser);
 
-    // Mock order data from cart context
-    const mockOrderData = {
-      orderId: 'ORD' + Date.now()?.toString()?.slice(-6),
-      items: [
-        {
-          id: 'drink_001',
-          name: 'Classic Milk Tea',
-          size: 'Large',
-          price: 350,
-          quantity: 2,
-          toppings: ['Tapioca Pearls', 'Extra Sugar']
-        },
-        {
-          id: 'drink_002',
-          name: 'Taro Smoothie',
-          size: 'Medium',
-          price: 280,
-          quantity: 1,
-          toppings: ['Coconut Jelly']
-        },
-        {
-          id: 'snack_001',
-          name: 'Chicken Wings',
-          price: 450,
-          quantity: 1,
-          toppings: []
-        }
-      ],
-      subtotal: 1430,
-      tax: 0,
-      total: 1430,
-      timestamp: new Date()?.toISOString()
-    };
-    setOrderData(mockOrderData);
-  }, []);
+    // Get real order data from localStorage that was saved in the POS page
+    const savedOrderData = localStorage.getItem('currentOrder');
+    
+    if (savedOrderData) {
+      try {
+        const parsedOrderData = JSON.parse(savedOrderData);
+        
+        // Transform the cart items to match the expected format
+        const transformedOrderData = {
+          orderId: 'ORD' + Date.now().toString().slice(-6),
+          items: parsedOrderData.items.map(item => ({
+            id: item.id || item.cartId,
+            name: item.name,
+            size: item.size || 'Regular', // Use size if available, otherwise default
+            price: item.price,
+            quantity: item.quantity,
+            toppings: item.toppings || [] // Add toppings if they exist
+          })),
+          subtotal: parsedOrderData.total,
+          tax: parsedOrderData.tax || (parsedOrderData.total * 0.16),
+          total: parsedOrderData.grandTotal || (parsedOrderData.total * 1.16),
+          timestamp: parsedOrderData.timestamp || new Date().toISOString(),
+          cashier: parsedOrderData.cashier
+        };
+        
+        setOrderData(transformedOrderData);
+      } catch (error) {
+        console.error('Error parsing order data:', error);
+        // Fallback to redirect if no valid order data
+        navigate('/point-of-sale-order-processing');
+      }
+    } else {
+      // No order data found, redirect back to POS
+      console.warn('No order data found, redirecting to POS');
+      navigate('/point-of-sale-order-processing');
+    }
+  }, [navigate]);
 
   const handleLogout = () => {
     setUser(null);
+    // Clear any stored order data on logout
+    localStorage.removeItem('currentOrder');
     navigate('/staff-login-and-authentication');
   };
 
@@ -85,10 +89,14 @@ const PaymentProcessingAndCheckout = () => {
       setPaymentData({
         ...paymentDetails,
         orderId: orderData?.orderId,
-        tipAmount: tipAmount
+        tipAmount: tipAmount,
+        timestamp: new Date().toISOString()
       });
       setCurrentStep('summary');
       setIsProcessing(false);
+      
+      // Clear the current order from localStorage after successful payment
+      localStorage.removeItem('currentOrder');
     }, 1500);
   };
 
@@ -113,20 +121,35 @@ const PaymentProcessingAndCheckout = () => {
         </head>
         <body>
           <div class="header">
-            <h2>Boba POS System</h2>
+            <h2>Boba Cafe POS System</h2>
             <p>Receipt #${orderData?.orderId}</p>
             <p>${new Date(paymentData.timestamp)?.toLocaleString('en-KE')}</p>
+            <p>Cashier: ${orderData?.cashier?.name || 'N/A'}</p>
           </div>
           ${orderData?.items?.map(item => `
             <div class="item">
-              <span>${item?.name} (${item?.size || 'Regular'}) x${item?.quantity}</span>
+              <span>${item?.name} ${item?.size ? `(${item?.size})` : ''} x${item?.quantity}</span>
               <span>KES ${(item?.price * item?.quantity)?.toFixed(2)}</span>
             </div>
           `)?.join('')}
+          ${tipAmount > 0 ? `
+            <div class="item">
+              <span>Tip:</span>
+              <span>KES ${tipAmount?.toFixed(2)}</span>
+            </div>
+          ` : ''}
           <div class="total">
             <div class="item">
+              <span>Subtotal:</span>
+              <span>KES ${orderData?.subtotal?.toFixed(2)}</span>
+            </div>
+            <div class="item">
+              <span>Tax (16%):</span>
+              <span>KES ${orderData?.tax?.toFixed(2)}</span>
+            </div>
+            <div class="item">
               <span>Total:</span>
-              <span>KES ${orderData?.total?.toFixed(2)}</span>
+              <span>KES ${(orderData?.total + tipAmount)?.toFixed(2)}</span>
             </div>
             <div class="item">
               <span>Payment:</span>
@@ -135,6 +158,7 @@ const PaymentProcessingAndCheckout = () => {
           </div>
           <div style="text-align: center; margin-top: 20px;">
             <p>Thank you for your business!</p>
+            <p>Visit us again!</p>
           </div>
         </body>
       </html>
@@ -154,10 +178,14 @@ const PaymentProcessingAndCheckout = () => {
   };
 
   const handleNewOrder = () => {
+    // Clear any remaining order data and go to new order
+    localStorage.removeItem('currentOrder');
     navigate('/point-of-sale-order-processing');
   };
 
   const handleCloseTransaction = () => {
+    // Clear any remaining order data and go back to POS
+    localStorage.removeItem('currentOrder');
     navigate('/point-of-sale-order-processing');
   };
 
@@ -166,10 +194,14 @@ const PaymentProcessingAndCheckout = () => {
     setShowRefundModal(false);
   };
 
+  // Loading state while order data is being processed
   if (!user || !orderData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+          <p className="text-muted-foreground">Loading order data...</p>
+        </div>
       </div>
     );
   }
@@ -187,7 +219,7 @@ const PaymentProcessingAndCheckout = () => {
                   Payment Processing & Checkout
                 </h1>
                 <p className="text-muted-foreground">
-                  Complete customer payment with multiple payment options
+                  Order #{orderData?.orderId} • {orderData?.items?.length} items • Total: KES {(orderData?.total + tipAmount)?.toLocaleString('en-KE', { minimumFractionDigits: 2 })}
                 </p>
               </div>
               
@@ -276,7 +308,7 @@ const PaymentProcessingAndCheckout = () => {
                       <div key={index} className="flex justify-between text-sm">
                         <div className="flex-1">
                           <div className="font-medium">{item?.name}</div>
-                          {item?.size && (
+                          {item?.size && item?.size !== 'Regular' && (
                             <div className="text-muted-foreground text-xs">Size: {item?.size}</div>
                           )}
                           {item?.toppings && item?.toppings?.length > 0 && (
@@ -300,6 +332,10 @@ const PaymentProcessingAndCheckout = () => {
                       <span>Subtotal:</span>
                       <span>KES {orderData?.subtotal?.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</span>
                     </div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>Tax (16%):</span>
+                      <span>KES {orderData?.tax?.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</span>
+                    </div>
                     {tipAmount > 0 && (
                       <div className="flex justify-between text-sm mb-2">
                         <span>Tip:</span>
@@ -309,6 +345,14 @@ const PaymentProcessingAndCheckout = () => {
                     <div className="flex justify-between text-lg font-bold text-primary">
                       <span>Total:</span>
                       <span>KES {(orderData?.total + tipAmount)?.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Cashier Info */}
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="text-xs text-muted-foreground">
+                      <p>Cashier: {orderData?.cashier?.name}</p>
+                      <p>Time: {new Date(orderData?.timestamp)?.toLocaleString('en-KE')}</p>
                     </div>
                   </div>
                 </div>

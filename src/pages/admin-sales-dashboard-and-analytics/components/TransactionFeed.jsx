@@ -1,16 +1,186 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 
-const TransactionFeed = ({ transactions = [] }) => {
+const TransactionFeed = ({ 
+  apiEndpoint = '/api/transactions',
+  websocketUrl = 'ws://localhost:8080/transactions',
+  pollInterval = 30000, // 30 seconds fallback polling
+  pageSize = 50 
+}) => {
+  const [transactions, setTransactions] = useState([]);
   const [isLive, setIsLive] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, mpesa, cash
+  const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
+  
+  const wsRef = useRef(null);
+  const pollIntervalRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const reconnectAttempts = useRef(0);
+  const maxReconnectAttempts = 5;
+
+  // Fetch initial transactions
+  const fetchTransactions = useCallback(async (pageNum = 1, append = false) => {
+    try {
+      setError(null);
+      if (!append) setLoading(true);
+      
+      const response = await fetch(`${apiEndpoint}?page=${pageNum}&limit=${pageSize}&filter=${filter}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (append) {
+        setTransactions(prev => [...prev, ...data.transactions]);
+      } else {
+        setTransactions(data.transactions || []);
+      }
+      
+      setHasMoreData(data.hasMore || false);
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to fetch transactions:', err);
+      setError(err.message);
+      setLoading(false);
+    }
+  }, [apiEndpoint, pageSize, filter]);
+
+  // WebSocket connection management
+  const connectWebSocket = useCallback(() => {
+    if (!isLive) return;
+
+    try {
+      wsRef.current = new WebSocket(websocketUrl);
+      
+      wsRef.current.onopen = () => {
+        console.log('WebSocket connected');
+        reconnectAttempts.current = 0;
+        setError(null);
+      };
+      
+      wsRef.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'new_transaction') {
+            setTransactions(prev => [data.transaction, ...prev]);
+          } else if (data.type === 'transaction_update') {
+            setTransactions(prev => 
+              prev.map(txn => 
+                txn.id === data.transaction.id ? { ...txn, ...data.transaction } : txn
+              )
+            );
+          } else if (data.type === 'transaction_delete') {
+            setTransactions(prev => prev.filter(txn => txn.id !== data.transactionId));
+          }
+        } catch (err) {
+          console.error('Error parsing WebSocket message:', err);
+        }
+      };
+      
+      wsRef.current.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason);
+        
+        if (isLive && reconnectAttempts.current < maxReconnectAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+          reconnectAttempts.current += 1;
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            console.log(`Attempting to reconnect (${reconnectAttempts.current}/${maxReconnectAttempts})...`);
+            connectWebSocket();
+          }, delay);
+        }
+      };
+      
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setError('Connection error. Retrying...');
+      };
+    } catch (err) {
+      console.error('Failed to create WebSocket connection:', err);
+      setError('Failed to establish real-time connection');
+    }
+  }, [websocketUrl, isLive]);
+
+  // Polling fallback
+  const startPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+    
+    pollIntervalRef.current = setInterval(() => {
+      if (isLive) {
+        fetchTransactions(1, false);
+      }
+    }, pollInterval);
+  }, [fetchTransactions, pollInterval, isLive]);
+
+  // Initialize data fetching and real-time connection
+  useEffect(() => {
+    fetchTransactions(1, false);
+  }, [fetchTransactions]);
+
+  // Manage WebSocket connection
+  useEffect(() => {
+    if (isLive) {
+      connectWebSocket();
+      // Start polling as fallback
+      startPolling();
+    } else {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    }
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+    };
+  }, [isLive, connectWebSocket, startPolling]);
+
+  // Refresh data when filter changes
+  useEffect(() => {
+    setPage(1);
+    fetchTransactions(1, false);
+  }, [filter, fetchTransactions]);
 
   const filteredTransactions = transactions?.filter(transaction => {
     if (filter === 'all') return true;
     return transaction?.method?.toLowerCase() === (filter === 'mpesa' ? 'm-pesa' : filter);
   });
+
+  const handleToggleLive = () => {
+    setIsLive(!isLive);
+  };
+
+  const handleRefresh = () => {
+    setPage(1);
+    fetchTransactions(1, false);
+  };
+
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchTransactions(nextPage, true);
+  };
 
   const getMethodIcon = (method) => {
     switch (method?.toLowerCase()) {
@@ -75,6 +245,17 @@ const TransactionFeed = ({ transactions = [] }) => {
   const mpesaCount = filteredTransactions?.filter(txn => txn?.method?.toLowerCase() === 'm-pesa')?.length;
   const cashCount = filteredTransactions?.filter(txn => txn?.method?.toLowerCase() === 'cash')?.length;
 
+  if (loading && transactions.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-6">
+        <div className="flex items-center justify-center py-8">
+          <Icon name="Loader" size={32} className="animate-spin text-muted-foreground mr-2" />
+          <span className="text-muted-foreground">Loading transactions...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-card border border-border rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
@@ -88,6 +269,9 @@ const TransactionFeed = ({ transactions = [] }) => {
             <span className="text-xs text-muted-foreground">
               {isLive ? 'Live updates' : 'Paused'}
             </span>
+            {error && (
+              <span className="text-xs text-error ml-2">• {error}</span>
+            )}
           </div>
         </div>
         
@@ -95,7 +279,7 @@ const TransactionFeed = ({ transactions = [] }) => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsLive(!isLive)}
+            onClick={handleToggleLive}
             iconName={isLive ? "Pause" : "Play"}
             iconSize={14}
             className="touch-feedback"
@@ -104,14 +288,16 @@ const TransactionFeed = ({ transactions = [] }) => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => window.location?.reload()}
+            onClick={handleRefresh}
             iconName="RefreshCw"
             iconSize={14}
-            className="touch-feedback"
+            className={`touch-feedback ${loading ? 'animate-spin' : ''}`}
             title="Refresh feed"
+            disabled={loading}
           />
         </div>
       </div>
+
       {/* Filter Buttons */}
       <div className="flex space-x-2 mb-4">
         {[
@@ -130,6 +316,7 @@ const TransactionFeed = ({ transactions = [] }) => {
           </Button>
         ))}
       </div>
+
       {/* Feed Summary */}
       <div className="mb-4 p-3 bg-muted/50 rounded-md">
         <div className="flex items-center justify-between text-sm">
@@ -145,6 +332,7 @@ const TransactionFeed = ({ transactions = [] }) => {
           </span>
         </div>
       </div>
+
       {/* Transaction List */}
       <div className="space-y-3 max-h-96 overflow-y-auto">
         {filteredTransactions?.length > 0 ? (
@@ -215,13 +403,14 @@ const TransactionFeed = ({ transactions = [] }) => {
           <div className="text-center py-8">
             <Icon name="Inbox" size={32} className="mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
-              No transactions found for selected filter
+              {error ? 'Failed to load transactions' : 'No transactions found for selected filter'}
             </p>
           </div>
         )}
       </div>
+
       {/* Load More */}
-      {filteredTransactions?.length > 0 && (
+      {filteredTransactions?.length > 0 && hasMoreData && (
         <div className="mt-4 text-center">
           <Button
             variant="outline"
@@ -229,9 +418,10 @@ const TransactionFeed = ({ transactions = [] }) => {
             iconName="ChevronDown"
             iconPosition="right"
             className="touch-feedback"
-            onClick={() => alert('Loading more transactions (mock)')}
+            onClick={handleLoadMore}
+            disabled={loading}
           >
-            Load More
+            {loading ? 'Loading...' : 'Load More'}
           </Button>
         </div>
       )}

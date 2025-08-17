@@ -1,11 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 
-const PeakHourAnalysis = ({ data = [] }) => {
+const PeakHourAnalysis = ({ dateRange }) => {
   const [viewMode, setViewMode] = useState('transactions'); // transactions, revenue
   const [chartType, setChartType] = useState('area'); // area, bar
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  // Fetch data when component mounts or dateRange changes
+  useEffect(() => {
+    fetchPeakHourData();
+  }, [dateRange]);
+
+  // Auto-refresh data every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchPeakHourData(true); // Silent refresh
+    }, 300000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [dateRange]);
+
+  const fetchPeakHourData = async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/analytics/peak-hours', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          startDate: dateRange?.startDate,
+          endDate: dateRange?.endDate
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const peakHourData = await response.json();
+      
+      // Transform data to ensure consistent hourly format
+      const transformedData = peakHourData.map(hour => ({
+        hour: typeof hour.hour === 'string' ? hour.hour : `${hour.hour.toString().padStart(2, '0')}`,
+        transactions: hour.transactions || 0,
+        revenue: hour.revenue || 0,
+        avgOrderValue: hour.transactions > 0 ? (hour.revenue / hour.transactions) : 0
+      }));
+
+      setData(transformedData);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error('Error fetching peak hour data:', err);
+      setError(err.message);
+      
+      // Fallback to empty array on error
+      setData([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
 
   const viewOptions = [
     { key: 'transactions', label: 'Transactions', icon: 'ShoppingBag' },
@@ -48,7 +109,7 @@ const PeakHourAnalysis = ({ data = [] }) => {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Avg Order:</span>
               <span className="font-medium">
-                KES {(data?.revenue / data?.transactions)?.toFixed(2)}
+                KES {data?.avgOrderValue?.toFixed(2)}
               </span>
             </div>
           </div>
@@ -58,16 +119,66 @@ const PeakHourAnalysis = ({ data = [] }) => {
     return null;
   };
 
-  // Find peak hours
-  const peakHour = data?.reduce((max, hour) => 
-    hour?.[viewMode] > max?.[viewMode] ? hour : max, data?.[0] || {});
+  // Calculate analytics from data
+  const getAnalytics = () => {
+    if (!data || data.length === 0) {
+      return {
+        peakHour: null,
+        totalTransactions: 0,
+        totalRevenue: 0,
+        avgTransactions: 0,
+        busyHours: []
+      };
+    }
+
+    const peakHour = data.reduce((max, hour) => 
+      hour?.[viewMode] > max?.[viewMode] ? hour : max, data[0]);
     
-  const totalTransactions = data?.reduce((sum, hour) => sum + hour?.transactions, 0);
-  const totalRevenue = data?.reduce((sum, hour) => sum + hour?.revenue, 0);
-  
-  // Identify busy periods (hours with above average activity)
-  const avgTransactions = totalTransactions / data?.length || 0;
-  const busyHours = data?.filter(hour => hour?.transactions > avgTransactions);
+    const totalTransactions = data.reduce((sum, hour) => sum + (hour?.transactions || 0), 0);
+    const totalRevenue = data.reduce((sum, hour) => sum + (hour?.revenue || 0), 0);
+    const avgTransactions = totalTransactions / data.length;
+    const busyHours = data.filter(hour => (hour?.transactions || 0) > avgTransactions);
+
+    return {
+      peakHour,
+      totalTransactions,
+      totalRevenue,
+      avgTransactions,
+      busyHours
+    };
+  };
+
+  const analytics = getAnalytics();
+
+  const formatLastUpdated = () => {
+    if (!lastUpdated) return '';
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - lastUpdated) / 1000);
+    
+    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  };
+
+  if (error && !data.length) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-6">
+        <div className="text-center">
+          <Icon name="AlertTriangle" size={48} className="mx-auto text-error mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">Failed to Load Peak Hour Data</h3>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button
+            onClick={() => fetchPeakHourData()}
+            iconName="RefreshCw"
+            iconPosition="left"
+            className="touch-feedback"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
@@ -76,13 +187,23 @@ const PeakHourAnalysis = ({ data = [] }) => {
           <h3 className="text-lg font-semibold text-foreground flex items-center">
             <Icon name="Clock" size={20} className="mr-2" />
             Peak Hour Analysis
+            {loading && (
+              <div className="ml-2 animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
+            )}
           </h3>
-          {peakHour?.hour && (
-            <p className="text-sm text-muted-foreground mt-1">
-              Peak hour: <span className="text-foreground font-medium">{peakHour?.hour}:00</span>
-              {' '}({formatValue(peakHour?.[viewMode], viewMode)})
-            </p>
-          )}
+          <div className="flex items-center space-x-4 mt-1">
+            {analytics.peakHour?.hour && (
+              <p className="text-sm text-muted-foreground">
+                Peak hour: <span className="text-foreground font-medium">{analytics.peakHour?.hour}:00</span>
+                {' '}({formatValue(analytics.peakHour?.[viewMode], viewMode)})
+              </p>
+            )}
+            {lastUpdated && (
+              <p className="text-xs text-muted-foreground">
+                Updated {formatLastUpdated()}
+              </p>
+            )}
+          </div>
         </div>
         
         <div className="flex items-center space-x-2">
@@ -96,6 +217,7 @@ const PeakHourAnalysis = ({ data = [] }) => {
               iconPosition="left"
               iconSize={16}
               className="touch-feedback"
+              disabled={loading}
             >
               {option?.label}
             </Button>
@@ -111,12 +233,44 @@ const PeakHourAnalysis = ({ data = [] }) => {
                 iconName={option?.icon}
                 iconSize={16}
                 className="touch-feedback"
+                disabled={loading}
               />
             ))}
           </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fetchPeakHourData()}
+            iconName="RefreshCw"
+            iconSize={16}
+            className={`touch-feedback ${loading ? 'animate-spin' : ''}`}
+            disabled={loading}
+            title="Refresh data"
+          />
         </div>
       </div>
-      {data?.length > 0 ? (
+
+      {loading ? (
+        <div className="space-y-6">
+          {/* Chart skeleton */}
+          <div className="h-80 bg-muted animate-pulse rounded"></div>
+          
+          {/* Insights skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, index) => (
+              <div key={index} className="border border-border rounded-lg p-4 animate-pulse">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-4 h-4 bg-muted rounded"></div>
+                  <div className="h-3 bg-muted rounded w-24"></div>
+                </div>
+                <div className="h-6 bg-muted rounded mb-1"></div>
+                <div className="h-2 bg-muted rounded w-16"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : data?.length > 0 ? (
         <div className="space-y-6">
           {/* Chart */}
           <div className="h-80">
@@ -182,10 +336,10 @@ const PeakHourAnalysis = ({ data = [] }) => {
                 <h4 className="text-sm font-medium text-foreground">Peak Performance</h4>
               </div>
               <div className="text-lg font-bold text-primary">
-                {peakHour?.hour}:00
+                {analytics.peakHour?.hour}:00
               </div>
               <div className="text-xs text-muted-foreground">
-                {formatValue(peakHour?.[viewMode], viewMode)}
+                {formatValue(analytics.peakHour?.[viewMode], viewMode)}
               </div>
             </div>
 
@@ -195,7 +349,7 @@ const PeakHourAnalysis = ({ data = [] }) => {
                 <h4 className="text-sm font-medium text-foreground">Busy Hours</h4>
               </div>
               <div className="text-lg font-bold text-secondary">
-                {busyHours?.length}
+                {analytics.busyHours?.length}
               </div>
               <div className="text-xs text-muted-foreground">
                 Above average activity
@@ -209,8 +363,8 @@ const PeakHourAnalysis = ({ data = [] }) => {
               </div>
               <div className="text-lg font-bold text-accent">
                 {viewMode === 'revenue' ? 
-                  `KES ${(totalRevenue / data?.length)?.toFixed(0)}` :
-                  Math.round(totalTransactions / data?.length)
+                  `KES ${(analytics.totalRevenue / data?.length)?.toFixed(0)}` :
+                  Math.round(analytics.totalTransactions / data?.length)
                 }
               </div>
               <div className="text-xs text-muted-foreground">
@@ -227,10 +381,11 @@ const PeakHourAnalysis = ({ data = [] }) => {
                 <div 
                   key={hour?.hour} 
                   className={`p-3 border rounded-md transition-colors ${
-                    hour === peakHour 
+                    hour === analytics.peakHour 
                       ? 'border-primary bg-primary/5' 
-                      : hour?.transactions > avgTransactions
-                        ? 'border-secondary bg-secondary/5' :'border-border hover:bg-muted/50'
+                      : (hour?.transactions || 0) > analytics.avgTransactions
+                        ? 'border-secondary bg-secondary/5' 
+                        : 'border-border hover:bg-muted/50'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -238,20 +393,20 @@ const PeakHourAnalysis = ({ data = [] }) => {
                       {hour?.hour}:00
                     </div>
                     <div className="flex items-center space-x-1">
-                      {hour === peakHour && (
+                      {hour === analytics.peakHour && (
                         <Icon name="Crown" size={14} className="text-primary" />
                       )}
-                      {hour?.transactions > avgTransactions && hour !== peakHour && (
+                      {(hour?.transactions || 0) > analytics.avgTransactions && hour !== analytics.peakHour && (
                         <Icon name="TrendingUp" size={14} className="text-secondary" />
                       )}
                     </div>
                   </div>
                   
                   <div className="text-sm text-muted-foreground mt-1">
-                    {hour?.transactions} transactions
+                    {hour?.transactions || 0} transactions
                   </div>
                   <div className="text-sm font-medium text-foreground">
-                    {formatValue(hour?.revenue, 'revenue')}
+                    {formatValue(hour?.revenue || 0, 'revenue')}
                   </div>
                 </div>
               ))}
@@ -263,6 +418,14 @@ const PeakHourAnalysis = ({ data = [] }) => {
           <div className="text-center">
             <Icon name="Clock" size={48} className="mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No hourly data available</p>
+            <Button
+              onClick={() => fetchPeakHourData()}
+              variant="outline"
+              size="sm"
+              className="mt-2"
+            >
+              Refresh
+            </Button>
           </div>
         </div>
       )}
