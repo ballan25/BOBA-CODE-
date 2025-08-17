@@ -6,6 +6,33 @@ const ProductGrid = ({ products, onAddToCart, onProductSelect }) => {
     return `KES ${price?.toLocaleString('en-KE', { minimumFractionDigits: 2 })}`;
   };
 
+  // Function to get product image based on product name/id
+  const getProductImage = (product) => {
+    const productName = product?.name?.toLowerCase() || '';
+    
+    // Map specific products to their images
+    if (productName.includes('blueberry milkshake')) {
+      return '/assets/blueberry milkshake.jpg';
+    }
+    if (productName.includes('strawberry') && productName.includes('milk tea')) {
+      return '/assets/strawberry milk tea.jpg';
+    }
+    if (productName.includes('taro milk tea')) {
+      return '/assets/taro milk tea.jpg';
+    }
+    
+    // Default fallback image
+    return '/assets/no_image.png';
+  };
+
+  // Check if product has a specific image (not the default)
+  const hasSpecificImage = (product) => {
+    const productName = product?.name?.toLowerCase() || '';
+    return productName.includes('blueberry milkshake') || 
+           (productName.includes('strawberry') && productName.includes('milk tea')) ||
+           productName.includes('taro milk tea');
+  };
+
   // Fixed green class with proper padding and sizing
   const greenClass = "border-green-700 bg-green-700 text-white font-semibold rounded transition-colors hover:bg-green-800 hover:border-green-800 px-4 py-3";
 
@@ -15,51 +42,81 @@ const ProductGrid = ({ products, onAddToCart, onProductSelect }) => {
         {products?.map((product) => (
           <div
             key={product?.id}
-            className="bg-card border border-border rounded-lg shadow-elevation-1 transition-all duration-200 hover:shadow-elevation-2 flex flex-col justify-between p-6 min-h-[200px] w-full"
+            className="bg-card border border-border rounded-lg shadow-elevation-1 transition-all duration-200 hover:shadow-elevation-2 flex flex-col justify-between overflow-hidden min-h-[280px] w-full"
           >
-            <div className="flex-1">
-              <h3 className="font-semibold text-base text-foreground mb-3 text-center break-words">
-                {product?.name}
-              </h3>
-              <p className="text-xs text-muted-foreground mb-3 text-center break-words">
-                {product?.description}
-              </p>
-              {product?.sizes && (
-                <div className="mb-3 w-full text-xs text-muted-foreground text-center">
-                  {product.sizes.map(size => (
-                    <div key={size.id} className="mb-1">
-                      {size.name}: {formatPrice(size.price)}
+            {/* Product Image */}
+            <div className="w-full h-32 bg-gray-100 flex items-center justify-center overflow-hidden">
+              {hasSpecificImage(product) ? (
+                <img
+                  src={getProductImage(product)}
+                  alt={product?.name}
+                  className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
+                  onError={(e) => {
+                    e.target.src = '/assets/no_image.png';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                  <div className="text-center text-gray-500">
+                    <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gray-300 flex items-center justify-center">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
                     </div>
-                  ))}
+                    <span className="text-xs">No Image</span>
+                  </div>
                 </div>
               )}
             </div>
-            <div className="mt-auto">
-              {product?.sizes ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onProductSelect(product)}
-                  iconName="Plus"
-                  iconPosition="left"
-                  iconSize={14}
-                  className={`w-full mt-2 border-2 ${greenClass} min-h-[44px] flex items-center justify-center text-sm`}
-                >
-                  Select Size
-                </Button>
-              ) : (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => onAddToCart(product)}
-                  iconName="Plus"
-                  iconPosition="left"
-                  iconSize={14}
-                  className={`w-full mt-2 border-2 ${greenClass} min-h-[44px] flex items-center justify-center text-sm`}
-                >
-                  Add to Cart
-                </Button>
-              )}
+
+            {/* Product Info */}
+            <div className="flex-1 flex flex-col p-6">
+              <div className="flex-1">
+                <h3 className="font-semibold text-base text-foreground mb-3 text-center break-words">
+                  {product?.name}
+                </h3>
+                <p className="text-xs text-muted-foreground mb-3 text-center break-words">
+                  {product?.description}
+                </p>
+                {product?.sizes && (
+                  <div className="mb-3 w-full text-xs text-muted-foreground text-center">
+                    {product.sizes.map(size => (
+                      <div key={size.id} className="mb-1">
+                        {size.name}: {formatPrice(size.price)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Button */}
+              <div className="mt-auto">
+                {product?.sizes ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onProductSelect(product)}
+                    iconName="Plus"
+                    iconPosition="left"
+                    iconSize={14}
+                    className={`w-full mt-2 border-2 ${greenClass} min-h-[44px] flex items-center justify-center text-sm`}
+                  >
+                    Select Size
+                  </Button>
+                ) : (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => onAddToCart(product)}
+                    iconName="Plus"
+                    iconPosition="left"
+                    iconSize={14}
+                    className={`w-full mt-2 border-2 ${greenClass} min-h-[44px] flex items-center justify-center text-sm`}
+                  >
+                    Add to Cart
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         ))}
