@@ -130,18 +130,11 @@ const CartPanel = ({
       {/* Ultra Compact Footer */}
       {cartItems?.length > 0 && (
         <div className="border-t border-border p-2">
-          {/* Summary in single row */}
-          <div className="flex justify-between items-center text-xs mb-2">
-            <div className="flex space-x-4">
-              <span className="text-muted-foreground">
-                Sub: {formatPrice(cartTotal)}
-              </span>
-              <span className="text-muted-foreground">
-                Tax: {formatPrice(cartTotal * 0.16)}
-              </span>
-            </div>
-            <span className="text-sm font-bold text-primary">
-              {formatPrice(cartTotal * 1.16)}
+          {/* Total without tax calculations */}
+          <div className="flex justify-between items-center text-sm mb-2">
+            <span className="text-muted-foreground">Total:</span>
+            <span className="font-bold text-primary">
+              {formatPrice(cartTotal)}
             </span>
           </div>
 
