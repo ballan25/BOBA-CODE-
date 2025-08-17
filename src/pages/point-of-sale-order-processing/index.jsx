@@ -315,8 +315,8 @@ const PointOfSaleOrderProcessing = () => {
     <div className="min-h-screen bg-background">
       <Header user={currentUser} onLogout={handleLogout} />
       <div className="pt-16 h-screen flex">
-        {/* Left Panel - Product Grid */}
-        <div className="w-full lg:w-1/2 flex flex-col">
+        {/* Left Panel - Product Grid (now wider) */}
+        <div className="w-full lg:w-3/4 flex flex-col">
           <CategoryFilter
             categories={categories}
             activeCategory={activeCategory}
@@ -328,14 +328,16 @@ const PointOfSaleOrderProcessing = () => {
             onProductSelect={handleProductSelect}
           />
         </div>
-        {/* Right Panel - Cart and Controls */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col">
-          <div className="p-2 border-b border-border">
+        {/* Right Panel - System Status + Current Order */}
+        <div className="hidden lg:flex lg:w-1/4 flex-col gap-4 px-2">
+          <div className="mb-2">
             <StatusIndicators
               mpesaStatus={systemStatus?.mpesa}
               firestoreStatus={systemStatus?.firestore}
               lastSync={systemStatus?.lastSync}
             />
+          </div>
+          <div className="mb-2">
             <QuickActions
               onQuickReorder={handleQuickReorder}
               onBarcodeMode={handleBarcodeMode}
@@ -395,3 +397,4 @@ const PointOfSaleOrderProcessing = () => {
 };
 
 export default PointOfSaleOrderProcessing;
+
