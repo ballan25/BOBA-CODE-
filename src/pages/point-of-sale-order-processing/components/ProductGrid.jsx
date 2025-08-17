@@ -1,6 +1,12 @@
 import React from 'react';
 import Button from '../../../components/ui/Button';
 
+// Import images at the top of the file
+import blueberryMilkshakeImg from '../../../assets/blueberry milkshake.jpg';
+import strawberryMilkTeaImg from '../../../assets/strawberry milk tea.jpg';
+import taroMilkTeaImg from '../../../assets/taro milk tea.jpg';
+import noImageImg from '../../../assets/no_image.png';
+
 const ProductGrid = ({ products, onAddToCart, onProductSelect }) => {
   const formatPrice = (price) => {
     return `KES ${price?.toLocaleString('en-KE', { minimumFractionDigits: 2 })}`;
@@ -12,17 +18,17 @@ const ProductGrid = ({ products, onAddToCart, onProductSelect }) => {
     
     // Map specific products to their images
     if (productName.includes('blueberry milkshake')) {
-      return '/assets/blueberry milkshake.jpg';
+      return blueberryMilkshakeImg;
     }
     if (productName.includes('strawberry') && productName.includes('milk tea')) {
-      return '/assets/strawberry milk tea.jpg';
+      return strawberryMilkTeaImg;
     }
     if (productName.includes('taro milk tea')) {
-      return '/assets/taro milk tea.jpg';
+      return taroMilkTeaImg;
     }
     
     // Default fallback image
-    return '/assets/no_image.png';
+    return noImageImg;
   };
 
   // Check if product has a specific image (not the default)
@@ -52,7 +58,7 @@ const ProductGrid = ({ products, onAddToCart, onProductSelect }) => {
                   alt={product?.name}
                   className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
                   onError={(e) => {
-                    e.target.src = '/assets/no_image.png';
+                    e.target.src = noImageImg;
                   }}
                 />
               ) : (
