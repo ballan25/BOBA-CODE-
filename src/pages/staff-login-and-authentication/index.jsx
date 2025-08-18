@@ -217,30 +217,6 @@ const StaffLoginAndAuthentication = () => {
               error={error}
               attemptCount={attemptCount}
             />
-
-            {/* Mock Credentials Display */}
-            <div className="bg-white/95 backdrop-blur-sm border border-white/20 rounded-lg p-4 shadow-xl">
-              <h4 className="font-medium text-foreground mb-2 flex items-center">
-                <Icon name="Key" size={16} className="mr-2" />
-                Demo Credentials
-              </h4>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="font-medium text-foreground">Cashier:</span>
-                  <div className="text-muted-foreground ml-2">
-                    Email: cashier@bobacafe.com<br />
-                    Password: cashier123
-                  </div>
-                </div>
-                <div>
-                  <span className="font-medium text-foreground">Manager:</span>
-                  <div className="text-muted-foreground ml-2">
-                    Email: manager@bobacafe.com<br />
-                    Password: manager123
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 

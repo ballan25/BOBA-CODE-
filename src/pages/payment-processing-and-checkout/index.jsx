@@ -20,6 +20,83 @@ const PaymentProcessingAndCheckout = () => {
   const [paymentData, setPaymentData] = useState(null);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [tipAmount, setTipAmount] = useState(0);
+  const [savedTransaction, setSavedTransaction] = useState(null);
+
+  // Transaction saving utility functions
+  const generateTransactionId = () => {
+    return 'TXN' + Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase();
+  };
+
+  const saveTransaction = (transactionData) => {
+    try {
+      // Get existing transactions from localStorage
+      const existingTransactions = localStorage.getItem('savedTransactions');
+      const transactions = existingTransactions ? JSON.parse(existingTransactions) : [];
+      
+      // Add new transaction
+      const newTransaction = {
+        id: generateTransactionId(),
+        ...transactionData,
+        savedAt: new Date().toISOString(),
+        status: 'completed'
+      };
+      
+      transactions.push(newTransaction);
+      
+      // Save back to localStorage
+      localStorage.setItem('savedTransactions', JSON.stringify(transactions));
+      
+      // Also save to daily transactions for reporting
+      const today = new Date().toISOString().split('T')[0];
+      const dailyKey = `transactions_${today}`;
+      const dailyTransactions = localStorage.getItem(dailyKey);
+      const todayTransactions = dailyTransactions ? JSON.parse(dailyTransactions) : [];
+      todayTransactions.push(newTransaction);
+      localStorage.setItem(dailyKey, JSON.stringify(todayTransactions));
+      
+      console.log('Transaction saved:', newTransaction);
+      return newTransaction;
+    } catch (error) {
+      console.error('Error saving transaction:', error);
+      return null;
+    }
+  };
+
+  const saveRefundTransaction = (refundData) => {
+    try {
+      const existingTransactions = localStorage.getItem('savedTransactions');
+      const transactions = existingTransactions ? JSON.parse(existingTransactions) : [];
+      
+      const refundTransaction = {
+        id: generateTransactionId(),
+        type: 'refund',
+        originalOrderId: refundData.originalOrderId,
+        refundId: refundData.refundId,
+        amount: refundData.amount,
+        reason: refundData.reason,
+        processedBy: user,
+        timestamp: new Date().toISOString(),
+        status: 'completed'
+      };
+      
+      transactions.push(refundTransaction);
+      localStorage.setItem('savedTransactions', JSON.stringify(transactions));
+      
+      // Also save to daily transactions
+      const today = new Date().toISOString().split('T')[0];
+      const dailyKey = `transactions_${today}`;
+      const dailyTransactions = localStorage.getItem(dailyKey);
+      const todayTransactions = dailyTransactions ? JSON.parse(dailyTransactions) : [];
+      todayTransactions.push(refundTransaction);
+      localStorage.setItem(dailyKey, JSON.stringify(todayTransactions));
+      
+      console.log('Refund transaction saved:', refundTransaction);
+      return refundTransaction;
+    } catch (error) {
+      console.error('Error saving refund transaction:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     // Get user data (you might want to get this from your auth context instead)
@@ -86,12 +163,38 @@ const PaymentProcessingAndCheckout = () => {
     
     // Simulate payment processing delay
     setTimeout(() => {
-      setPaymentData({
+      const completePaymentData = {
         ...paymentDetails,
         orderId: orderData?.orderId,
         tipAmount: tipAmount,
         timestamp: new Date().toISOString()
-      });
+      };
+
+      setPaymentData(completePaymentData);
+
+      // Create comprehensive transaction data for saving
+      const transactionData = {
+        type: 'sale',
+        orderId: orderData?.orderId,
+        items: orderData?.items,
+        subtotal: orderData?.subtotal,
+        tax: orderData?.tax,
+        tipAmount: tipAmount,
+        total: orderData?.total + tipAmount,
+        paymentMethod: paymentDetails.method,
+        paymentDetails: paymentDetails,
+        cashier: orderData?.cashier,
+        customer: paymentDetails.customerInfo || null,
+        timestamp: completePaymentData.timestamp,
+        orderTimestamp: orderData?.timestamp,
+        location: 'Main Store', // You can make this dynamic
+        terminal: 'POS-001' // You can make this dynamic
+      };
+
+      // Save the transaction
+      const savedTxn = saveTransaction(transactionData);
+      setSavedTransaction(savedTxn);
+
       setCurrentStep('summary');
       setIsProcessing(false);
       
@@ -106,7 +209,7 @@ const PaymentProcessingAndCheckout = () => {
   };
 
   const handlePrintReceipt = () => {
-    // Mock receipt printing - Updated to remove tax line
+    // Mock receipt printing - Updated to remove tax line and include transaction ID
     const receiptWindow = window.open('', '_blank');
     receiptWindow?.document?.write(`
       <html>
@@ -123,6 +226,7 @@ const PaymentProcessingAndCheckout = () => {
           <div class="header">
             <h2>Boba Cafe POS System</h2>
             <p>Receipt #${orderData?.orderId}</p>
+            <p>Transaction ID: ${savedTransaction?.id || 'N/A'}</p>
             <p>${new Date(paymentData.timestamp)?.toLocaleString('en-KE')}</p>
             <p>Cashier: ${orderData?.cashier?.name || 'N/A'}</p>
           </div>
@@ -151,6 +255,7 @@ const PaymentProcessingAndCheckout = () => {
           <div style="text-align: center; margin-top: 20px;">
             <p>Thank you for your business!</p>
             <p>Visit us again!</p>
+            <p>Transaction saved: ${savedTransaction?.id || 'Error'}</p>
           </div>
         </body>
       </html>
@@ -160,18 +265,35 @@ const PaymentProcessingAndCheckout = () => {
   };
 
   const handleEmailReceipt = () => {
-    // Mock email receipt
-    alert('Receipt sent to customer email (mock functionality)');
+    // Mock email receipt with transaction data
+    const emailData = {
+      transactionId: savedTransaction?.id,
+      orderId: orderData?.orderId,
+      total: orderData?.total + tipAmount,
+      timestamp: paymentData?.timestamp
+    };
+    alert(`Receipt sent to customer email (mock functionality)\nTransaction ID: ${emailData.transactionId}`);
   };
 
   const handleSMSReceipt = () => {
-    // Mock SMS receipt
-    alert('Receipt sent via SMS (mock functionality)');
+    // Mock SMS receipt with transaction data
+    const smsData = {
+      transactionId: savedTransaction?.id,
+      total: orderData?.total + tipAmount
+    };
+    alert(`Receipt sent via SMS (mock functionality)\nTransaction ID: ${smsData.transactionId}\nAmount: KES ${smsData.total.toFixed(2)}`);
   };
 
   const handleNewOrder = () => {
     // Clear any remaining order data and go to new order
     localStorage.removeItem('currentOrder');
+    // Reset all states for new order
+    setOrderData(null);
+    setPaymentData(null);
+    setSavedTransaction(null);
+    setSelectedPaymentMethod('');
+    setCurrentStep('method');
+    setTipAmount(0);
     navigate('/point-of-sale-order-processing');
   };
 
@@ -182,8 +304,38 @@ const PaymentProcessingAndCheckout = () => {
   };
 
   const handleRefundComplete = (refundData) => {
-    alert(`Refund processed: ${refundData?.refundId}\nAmount: KES ${refundData?.amount?.toFixed(2)}`);
+    // Save refund transaction
+    const refundTransaction = saveRefundTransaction({
+      ...refundData,
+      originalOrderId: orderData?.orderId
+    });
+
+    alert(`Refund processed: ${refundData?.refundId}\nAmount: KES ${refundData?.amount?.toFixed(2)}\nTransaction ID: ${refundTransaction?.id || 'Error'}`);
     setShowRefundModal(false);
+  };
+
+  // Add function to view all transactions (for debugging/admin)
+  const viewAllTransactions = () => {
+    const transactions = localStorage.getItem('savedTransactions');
+    if (transactions) {
+      console.log('All Saved Transactions:', JSON.parse(transactions));
+    } else {
+      console.log('No transactions found');
+    }
+  };
+
+  // Add function to export transactions
+  const exportTransactions = () => {
+    const transactions = localStorage.getItem('savedTransactions');
+    if (transactions) {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(transactions);
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `transactions_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+    }
   };
 
   // Loading state while order data is being processed
@@ -212,20 +364,46 @@ const PaymentProcessingAndCheckout = () => {
                 </h1>
                 <p className="text-muted-foreground">
                   Order #{orderData?.orderId} • {orderData?.items?.length} items • Total: KES {(orderData?.total + tipAmount)?.toLocaleString('en-KE', { minimumFractionDigits: 2 })}
+                  {savedTransaction && (
+                    <span className="ml-4 text-success">• Transaction ID: {savedTransaction.id}</span>
+                  )}
                 </p>
               </div>
               
-              {currentStep === 'summary' && user?.role === 'manager' && (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowRefundModal(true)}
-                  iconName="RefreshCw"
-                  iconPosition="left"
-                  className="touch-feedback"
-                >
-                  Process Refund
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {currentStep === 'summary' && user?.role === 'manager' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowRefundModal(true)}
+                    iconName="RefreshCw"
+                    iconPosition="left"
+                    className="touch-feedback"
+                  >
+                    Process Refund
+                  </Button>
+                )}
+                {/* Debug buttons - you can remove these in production */}
+                {user?.role === 'manager' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={viewAllTransactions}
+                      className="text-xs"
+                    >
+                      View Transactions (Console)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exportTransactions}
+                      className="text-xs"
+                    >
+                      Export Data
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Progress Indicator */}
@@ -342,6 +520,9 @@ const PaymentProcessingAndCheckout = () => {
                     <div className="text-xs text-muted-foreground">
                       <p>Cashier: {orderData?.cashier?.name}</p>
                       <p>Time: {new Date(orderData?.timestamp)?.toLocaleString('en-KE')}</p>
+                      {savedTransaction && (
+                        <p className="text-success">Txn ID: {savedTransaction.id}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -390,6 +571,7 @@ const PaymentProcessingAndCheckout = () => {
                     <TransactionSummary
                       orderData={orderData}
                       paymentData={paymentData}
+                      transactionData={savedTransaction}
                       onPrintReceipt={handlePrintReceipt}
                       onEmailReceipt={handleEmailReceipt}
                       onSMSReceipt={handleSMSReceipt}
