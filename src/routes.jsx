@@ -10,6 +10,7 @@ import StaffLoginAndAuthentication from './pages/staff-login-and-authentication/
 import PaymentProcessingAndCheckout from './pages/payment-processing-and-checkout/index.jsx';
 import PointOfSaleOrderProcessing from './pages/point-of-sale-order-processing/index.jsx';
 import AdminSalesDashboardAndAnalytics from './pages/admin-sales-dashboard-and-analytics/index.jsx';
+import CashierRecentTransactions from './pages/cashier-recent-transactions/index.jsx';
 
 // Create placeholder components for missing pages
 const Dashboard = () => (
@@ -220,6 +221,7 @@ const Routes = () => {
           <Route path="/staff-login-and-authentication" element={<StaffLoginAndAuthentication />} />
           <Route path="/payment-processing-and-checkout" element={<PaymentProcessingAndCheckout />} />
           <Route path="/admin-sales-dashboard-and-analytics" element={<AdminSalesDashboardAndAnalytics />} />
+          <Route path="/cashier-recent-transactions" element={<CashierRecentTransactions />} />
           
           {/* Additional placeholder routes */}
           <Route path="/dashboard" element={<Dashboard />} />

@@ -24,6 +24,13 @@ const Header = ({ user, onLogout }) => {
       tooltip: 'Payment Processing & Checkout'
     },
     {
+      label: 'Transactions',
+      path: '/cashier-recent-transactions',
+      icon: 'History',
+      roles: ['cashier', 'manager'],
+      tooltip: 'Recent Transactions'
+    },
+    {
       label: 'Dashboard',
       path: '/admin-sales-dashboard-and-analytics',
       icon: 'BarChart3',

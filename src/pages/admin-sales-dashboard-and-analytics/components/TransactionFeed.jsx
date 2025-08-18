@@ -3,11 +3,12 @@ import { format, parseISO } from 'date-fns';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 
-const TransactionFeed = ({ 
+const TransactionFeed = ({
   apiEndpoint = '/api/transactions',
   websocketUrl = 'ws://localhost:8080/transactions',
   pollInterval = 30000, // 30 seconds fallback polling
-  pageSize = 50 
+  pageSize = 50,
+  showActions = true
 }) => {
   const [transactions, setTransactions] = useState([]);
   const [isLive, setIsLive] = useState(true);
@@ -375,26 +376,28 @@ const TransactionFeed = ({
                     KES {transaction?.amount?.toLocaleString('en-KE', { minimumFractionDigits: 2 })}
                   </div>
                   
-                  <div className="flex space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      iconName="Eye"
-                      iconSize={12}
-                      className="touch-feedback p-1"
-                      title="View details"
-                      onClick={() => alert(`Viewing transaction ${transaction?.id}`)}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      iconName="Receipt"
-                      iconSize={12}
-                      className="touch-feedback p-1"
-                      title="View receipt"
-                      onClick={() => alert(`Opening receipt for ${transaction?.id}`)}
-                    />
-                  </div>
+                  {showActions && (
+                    <div className="flex space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconName="Eye"
+                        iconSize={12}
+                        className="touch-feedback p-1"
+                        title="View details"
+                        onClick={() => alert(`Viewing transaction ${transaction?.id}`)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconName="Receipt"
+                        iconSize={12}
+                        className="touch-feedback p-1"
+                        title="View receipt"
+                        onClick={() => alert(`Opening receipt for ${transaction?.id}`)}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

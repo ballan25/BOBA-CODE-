@@ -30,6 +30,13 @@ const Sidebar = ({ user, isCollapsed = false, onToggleCollapse, onLogout }) => {
           icon: 'CreditCard',
           roles: ['cashier', 'manager'],
           description: 'Handle payments & checkout'
+        },
+        {
+          label: 'Recent Transactions',
+          path: '/cashier-recent-transactions',
+          icon: 'History',
+          roles: ['cashier', 'manager'],
+          description: 'View recent transactions'
         }
       ]
     },
