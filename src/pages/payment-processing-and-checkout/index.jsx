@@ -5,10 +5,13 @@ import Button from '../../components/ui/Button';
 import Icon from '../../components/AppIcon';
 import PaymentMethodSelector from './components/PaymentMethodSelector';
 import CashPaymentForm from './components/CashPaymentForm';
-import MpesaPaymentForm from './components/MpesaPaymentForm';
+import PaybillPaymentForm from './components/PaybillPaymentForm';
 import SplitPaymentForm from './components/SplitPaymentForm';
 import TransactionSummary from './components/TransactionSummary';
 import RefundModal from './components/RefundModal';
+import { db, auth } from '../../firebase';
+import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const PaymentProcessingAndCheckout = () => {
   const navigate = useNavigate();
@@ -21,39 +24,28 @@ const PaymentProcessingAndCheckout = () => {
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [tipAmount, setTipAmount] = useState(0);
   const [savedTransaction, setSavedTransaction] = useState(null);
+  const [notification, setNotification] = useState(null);
 
-  // Transaction saving utility functions
-  const generateTransactionId = () => {
-    return 'TXN' + Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase();
+  const showNotification = (type, message) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 5000);
   };
 
-  const saveTransaction = (transactionData) => {
+  const saveTransaction = async (transactionData) => {
     try {
-      // Get existing transactions from localStorage
-      const existingTransactions = localStorage.getItem('savedTransactions');
-      const transactions = existingTransactions ? JSON.parse(existingTransactions) : [];
-      
-      // Add new transaction
+      const docRef = await addDoc(collection(db, 'transactions'), {
+        ...transactionData,
+        createdAt: new Date().toISOString(),
+        status: 'completed'
+      });
+
       const newTransaction = {
-        id: generateTransactionId(),
+        id: docRef.id,
         ...transactionData,
         savedAt: new Date().toISOString(),
         status: 'completed'
       };
-      
-      transactions.push(newTransaction);
-      
-      // Save back to localStorage
-      localStorage.setItem('savedTransactions', JSON.stringify(transactions));
-      
-      // Also save to daily transactions for reporting
-      const today = new Date().toISOString().split('T')[0];
-      const dailyKey = `transactions_${today}`;
-      const dailyTransactions = localStorage.getItem(dailyKey);
-      const todayTransactions = dailyTransactions ? JSON.parse(dailyTransactions) : [];
-      todayTransactions.push(newTransaction);
-      localStorage.setItem(dailyKey, JSON.stringify(todayTransactions));
-      
+
       console.log('Transaction saved:', newTransaction);
       return newTransaction;
     } catch (error) {
@@ -62,34 +54,23 @@ const PaymentProcessingAndCheckout = () => {
     }
   };
 
-  const saveRefundTransaction = (refundData) => {
+  const saveRefundTransaction = async (refundData) => {
     try {
-      const existingTransactions = localStorage.getItem('savedTransactions');
-      const transactions = existingTransactions ? JSON.parse(existingTransactions) : [];
-      
+      const docRef = await addDoc(collection(db, 'refunds'), {
+        ...refundData,
+        processedBy: user,
+        timestamp: new Date().toISOString(),
+        status: 'completed'
+      });
+
       const refundTransaction = {
-        id: generateTransactionId(),
-        type: 'refund',
-        originalOrderId: refundData.originalOrderId,
-        refundId: refundData.refundId,
-        amount: refundData.amount,
-        reason: refundData.reason,
+        id: docRef.id,
+        ...refundData,
         processedBy: user,
         timestamp: new Date().toISOString(),
         status: 'completed'
       };
-      
-      transactions.push(refundTransaction);
-      localStorage.setItem('savedTransactions', JSON.stringify(transactions));
-      
-      // Also save to daily transactions
-      const today = new Date().toISOString().split('T')[0];
-      const dailyKey = `transactions_${today}`;
-      const dailyTransactions = localStorage.getItem(dailyKey);
-      const todayTransactions = dailyTransactions ? JSON.parse(dailyTransactions) : [];
-      todayTransactions.push(refundTransaction);
-      localStorage.setItem(dailyKey, JSON.stringify(todayTransactions));
-      
+
       console.log('Refund transaction saved:', refundTransaction);
       return refundTransaction;
     } catch (error) {
@@ -99,22 +80,27 @@ const PaymentProcessingAndCheckout = () => {
   };
 
   useEffect(() => {
-    // Get user data (you might want to get this from your auth context instead)
-    const mockUser = {
-      id: 'CSH001',
-      name: 'Sarah Wanjiku',
-      email: 'sarah.wanjiku@bobacafe.co.ke',
-      role: 'cashier'
-    };
-    setUser(mockUser);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email,
+          email: firebaseUser.email,
+          role: firebaseUser.role || 'cashier'
+        });
+      } else {
+        setUser(null);
+        navigate('/staff-login-and-authentication');
+      }
+    });
 
     // Get real order data from localStorage that was saved in the POS page
     const savedOrderData = localStorage.getItem('currentOrder');
-    
+
     if (savedOrderData) {
       try {
         const parsedOrderData = JSON.parse(savedOrderData);
-        
+
         // Transform the cart items to match the expected format - NO TAX CALCULATION
         const transformedOrderData = {
           orderId: 'ORD' + Date.now().toString().slice(-6),
@@ -132,7 +118,7 @@ const PaymentProcessingAndCheckout = () => {
           timestamp: parsedOrderData.timestamp || new Date().toISOString(),
           cashier: parsedOrderData.cashier
         };
-        
+
         setOrderData(transformedOrderData);
       } catch (error) {
         console.error('Error parsing order data:', error);
@@ -144,11 +130,15 @@ const PaymentProcessingAndCheckout = () => {
       console.warn('No order data found, redirecting to POS');
       navigate('/point-of-sale-order-processing');
     }
+
+    return () => unsubscribe();
   }, [navigate]);
 
   const handleLogout = () => {
+    signOut(auth).catch((err) => console.error('Logout error:', err));
     setUser(null);
-    // Clear any stored order data on logout
+    localStorage.removeItem('bobaPosUser');
+    localStorage.removeItem('bobaPosRememberMe');
     localStorage.removeItem('currentOrder');
     navigate('/staff-login-and-authentication');
   };
@@ -160,9 +150,9 @@ const PaymentProcessingAndCheckout = () => {
 
   const handlePaymentComplete = (paymentDetails) => {
     setIsProcessing(true);
-    
+
     // Simulate payment processing delay
-    setTimeout(() => {
+    setTimeout(async () => {
       const completePaymentData = {
         ...paymentDetails,
         orderId: orderData?.orderId,
@@ -192,12 +182,17 @@ const PaymentProcessingAndCheckout = () => {
       };
 
       // Save the transaction
-      const savedTxn = saveTransaction(transactionData);
+      const savedTxn = await saveTransaction(transactionData);
+      if (savedTxn) {
+        showNotification('success', 'Transaction saved');
+      } else {
+        showNotification('error', 'Failed to save transaction');
+      }
       setSavedTransaction(savedTxn);
 
       setCurrentStep('summary');
       setIsProcessing(false);
-      
+
       // Clear the current order from localStorage after successful payment
       localStorage.removeItem('currentOrder');
     }, 1500);
@@ -264,24 +259,46 @@ const PaymentProcessingAndCheckout = () => {
     receiptWindow?.print();
   };
 
-  const handleEmailReceipt = () => {
-    // Mock email receipt with transaction data
+  const handleEmailReceipt = async () => {
     const emailData = {
       transactionId: savedTransaction?.id,
       orderId: orderData?.orderId,
       total: orderData?.total + tipAmount,
       timestamp: paymentData?.timestamp
     };
-    alert(`Receipt sent to customer email (mock functionality)\nTransaction ID: ${emailData.transactionId}`);
+
+    try {
+      const response = await fetch('/api/sendReceiptEmail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailData)
+      });
+      if (!response.ok) throw new Error('Network response was not ok');
+      showNotification('success', 'Receipt emailed successfully');
+    } catch (error) {
+      console.error('Email receipt error:', error);
+      showNotification('error', 'Failed to send email receipt');
+    }
   };
 
-  const handleSMSReceipt = () => {
-    // Mock SMS receipt with transaction data
+  const handleSMSReceipt = async () => {
     const smsData = {
       transactionId: savedTransaction?.id,
       total: orderData?.total + tipAmount
     };
-    alert(`Receipt sent via SMS (mock functionality)\nTransaction ID: ${smsData.transactionId}\nAmount: KES ${smsData.total.toFixed(2)}`);
+
+    try {
+      const response = await fetch('/api/sendReceiptSms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(smsData)
+      });
+      if (!response.ok) throw new Error('Network response was not ok');
+      showNotification('success', 'SMS receipt sent successfully');
+    } catch (error) {
+      console.error('SMS receipt error:', error);
+      showNotification('error', 'Failed to send SMS receipt');
+    }
   };
 
   const handleNewOrder = () => {
@@ -303,38 +320,45 @@ const PaymentProcessingAndCheckout = () => {
     navigate('/point-of-sale-order-processing');
   };
 
-  const handleRefundComplete = (refundData) => {
-    // Save refund transaction
-    const refundTransaction = saveRefundTransaction({
+  const handleRefundComplete = async (refundData) => {
+    const refundTransaction = await saveRefundTransaction({
       ...refundData,
       originalOrderId: orderData?.orderId
     });
 
-    alert(`Refund processed: ${refundData?.refundId}\nAmount: KES ${refundData?.amount?.toFixed(2)}\nTransaction ID: ${refundTransaction?.id || 'Error'}`);
+    if (refundTransaction) {
+      showNotification('success', `Refund processed: ${refundData?.refundId}`);
+    } else {
+      showNotification('error', 'Failed to process refund');
+    }
     setShowRefundModal(false);
   };
 
   // Add function to view all transactions (for debugging/admin)
-  const viewAllTransactions = () => {
-    const transactions = localStorage.getItem('savedTransactions');
-    if (transactions) {
-      console.log('All Saved Transactions:', JSON.parse(transactions));
-    } else {
-      console.log('No transactions found');
+  const viewAllTransactions = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'transactions'));
+      const txns = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log('All Saved Transactions:', txns);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
     }
   };
 
   // Add function to export transactions
-  const exportTransactions = () => {
-    const transactions = localStorage.getItem('savedTransactions');
-    if (transactions) {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(transactions);
+  const exportTransactions = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'transactions'));
+      const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions));
       const downloadAnchorNode = document.createElement('a');
       downloadAnchorNode.setAttribute("href", dataStr);
       downloadAnchorNode.setAttribute("download", `transactions_${new Date().toISOString().split('T')[0]}.json`);
       document.body.appendChild(downloadAnchorNode);
       downloadAnchorNode.click();
       downloadAnchorNode.remove();
+    } catch (error) {
+      console.error('Error exporting transactions:', error);
     }
   };
 
@@ -353,6 +377,17 @@ const PaymentProcessingAndCheckout = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header user={user} onLogout={handleLogout} />
+      {notification && (
+        <div
+          className={`fixed top-20 right-4 px-4 py-2 rounded shadow z-50 ${
+            notification.type === 'success'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
+          }`}
+        >
+          {notification.message}
+        </div>
+      )}
       <div className="pt-16">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-6xl mx-auto">
@@ -549,8 +584,8 @@ const PaymentProcessingAndCheckout = () => {
                     />
                   )}
 
-                  {currentStep === 'payment' && selectedPaymentMethod === 'mpesa' && (
-                    <MpesaPaymentForm
+                  {currentStep === 'payment' && selectedPaymentMethod === 'paybill' && (
+                    <PaybillPaymentForm
                       total={orderData?.total + tipAmount}
                       onPaymentComplete={handlePaymentComplete}
                       isProcessing={isProcessing}
