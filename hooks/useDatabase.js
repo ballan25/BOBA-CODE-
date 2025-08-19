@@ -4,7 +4,8 @@ import {
   TransactionService, 
   ProductService, 
   AnalyticsService, 
-  ReportService 
+  ReportService,
+  checkDatabaseHealth
 } from '../services/database';
 
 // ============ TRANSACTION HOOKS ============
@@ -336,7 +337,6 @@ export function useDatabaseStatus() {
 
   const checkStatus = useCallback(async () => {
     try {
-      const { checkDatabaseHealth } = await import('../services/database');
       const result = await checkDatabaseHealth();
       setStatus(result.status);
       setLastCheck(result.timestamp);
